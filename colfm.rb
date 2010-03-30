@@ -12,10 +12,19 @@ module Setlocale
 end
 Setlocale.setlocale(Setlocale::LC_ALL, "")
 
+class Fixnum
+  # <=1.8.6
+  if !defined?(ord)
+    def ord
+      self
+    end
+  end
+end
+
 ENV["RUBY_FFI_NCURSES_LIB"] = "ncursesw"
 require 'ffi-ncurses'
 require 'ffi-ncurses/keydefs'
-('A'..'Z').each { |c| NCurses.const_set "KEY_CTRL_#{c}", c[0]-?A+1 }
+('A'..'Z').each { |c| NCurses.const_set "KEY_CTRL_#{c}", c[0].ord-?A.ord+1 }
 
 Curses = NCurses
 Curses.extend FFI::NCurses
@@ -596,7 +605,7 @@ def readline(prompt)
       str.gsub!(/\A(.*)\S*\z/, '\1')
     when Curses::KEY_CTRL_U
       str = ""
-    when ?\r
+    when ?\r.ord
       yield :accept, str
     end
 
@@ -614,7 +623,7 @@ def isearch
     when Curses::KEY_LEFT
       $active.leave
 
-    when ?/, Curses::KEY_RIGHT
+    when ?/.ord, Curses::KEY_RIGHT
       if $active.sel.directory?
         $active.sel.activate  
         str.replace ""
@@ -685,12 +694,12 @@ def action(title, question, command, *args)
   Curses.addstr "colfm - #$sort - #{question} (y/N) "
   Curses.refresh
   case c = Curses.getch
-  when ?y
+  when ?y.ord
     system command, *args
   end
   switch_back
   refresh
-  c == ?y
+  c == ?y.ord
 end
 
 
@@ -740,11 +749,11 @@ begin
       refresh
       Curses.clear
       draw
-    when ?q, Curses::KEY_F10, Curses::KEY_CTRL_O
+    when ?q.ord, Curses::KEY_F10, Curses::KEY_CTRL_O
       break
-    when ?., ?~
-      $dotfiles = !$dotfiles  if c == ?.
-      $backup = !$backup      if c == ?~
+    when ?..ord, ?~.ord
+      $dotfiles = !$dotfiles  if c == ?..ord
+      $backup = !$backup      if c == ?~.ord
       names = $columns.map { |col| col.sel.name }
       refresh
       $columns.each_with_index { |col, i|
@@ -754,81 +763,81 @@ begin
           col.next
         end
       }
-    when ?h, Curses::KEY_LEFT
+    when ?h.ord, Curses::KEY_LEFT
       $active.leave
-    when ?j, Curses::KEY_DOWN
+    when ?j.ord, Curses::KEY_DOWN
       $active.cursor 1
-    when ?k, Curses::KEY_UP
+    when ?k.ord, Curses::KEY_UP
       $active.cursor -1
-    when ?l, Curses::KEY_RIGHT, ?\r, Curses::KEY_F3
+    when ?l.ord, Curses::KEY_RIGHT, ?\r.ord, Curses::KEY_F3
       $active.sel.activate
-    when ?J, Curses::KEY_NPAGE
+    when ?J.ord, Curses::KEY_NPAGE
       $active.cursor Curses.lines/2
-    when ?K, Curses::KEY_PPAGE
+    when ?K.ord, Curses::KEY_PPAGE
       $active.cursor -Curses.lines/2
-    when ?g, Curses::KEY_HOME
+    when ?g.ord, Curses::KEY_HOME
       $active.first
-    when ?G, Curses::KEY_END
+    when ?G.ord, Curses::KEY_END
       $active.last
-    when ?n
+    when ?n.ord
       if $active.sel.directory?
         $tabs[$tabcur] = [$columns, $active]
         $active.sel.activate
         $tabs.insert $tabcur+1, [$columns, $active]
         $columns, $active = $tabs[$tabcur]
       end
-    when ?N
+    when ?N.ord
       $tabs.delete_at($tabcur)  if $tabs.size > 1
       $tabcur = $tabcur % $tabs.size
       $columns, $active = $tabs[$tabcur]
       refresh
-    when ?t, ?\t
+    when ?t.ord, ?\t.ord
       $tabs[$tabcur] = [$columns, $active]
       $tabcur = ($tabcur+1) % $tabs.size
       $columns, $active = $tabs[$tabcur]
-    when ?T, Curses::KEY_BTAB
+    when ?T.ord, Curses::KEY_BTAB
       $tabs[$tabcur] = [$columns, $active]
       $tabcur = ($tabcur-1) % $tabs.size
       $columns, $active = $tabs[$tabcur]
-    when ?v
+    when ?v.ord
       $sidebar = !$sidebar
       refresh
-    when ?V
+    when ?V.ord
       $selection = !$selection
       if $selection
         switch [Selection.new('Selection')]
       else
         switch_back
       end
-    when ?S
+    when ?S.ord
       $reverse = !$reverse
       refresh
-    when ?s
+    when ?s.ord
       $sort = $sort%6 + 1
       refresh
-    when ?/, Curses::KEY_CTRL_S
+    when ?/.ord, Curses::KEY_CTRL_S
       isearch
       draw
       Curses.refresh
-    when ?%
+    when ?%.ord
       iselect
       draw
       Curses.refresh
-    when ?c
+    when ?c.ord
       $marked.clear
-    when ?m, ?\s
+    when ?m.ord, ?\s.ord
       $active.sel.mark
-    when Curses::KEY_F5, ?C
+    when Curses::KEY_F5, ?C.ord
       target = $active.dir
       action "Copy these files?",
              "Copy these #{$marked.size} files to #{target}?",
              "cp", "-a", *($marked + [target])
-    when Curses::KEY_F6, ?M
+    when Curses::KEY_F6, ?M.ord
       target = $active.dir
       action "Move these files?",
              "Move these #{$marked.size} files to #{target}?",
              "mv", *($marked + [target])  and $marked.clear
-    when Curses::KEY_F7, ?+
+    when Curses::KEY_F7, ?+.ord
       readline("Create directory: ") { |c, str|
         case c
         when :accept
@@ -837,14 +846,14 @@ begin
         end
       }
       refresh
-    when Curses::KEY_F8, ?X
+    when Curses::KEY_F8, ?X.ord
       action "Delete these files?",
              "Delete these #{$marked.size} files recursively?",
              "rm", "-rf", *$marked  and $marked.clear
-    when ?!
+    when ?!.ord
       readline("Shell command: ") { |c, str|
         case c
-        when ?\t
+        when ?\t.ord
           str << $active.sel.name << " "
         when Curses::KEY_BTAB
           str << $marked.join(" ")
