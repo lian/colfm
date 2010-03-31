@@ -10,7 +10,7 @@ http://imgur.com/WetkX.png
 
 == Installation
 
-Only Ruby 1.8 is supported so far.
+Ruby 1.8 and 1.9 are supported.
 
     gem install ffi ffi-ncurses
     cp colfm.rb ~/bin
@@ -33,16 +33,16 @@ detail (shows file sizes).
     /  C-s            enter I-search, find file by regular expression:
         /   Right         enter selected directory
         ..  Left          go to parent
-    
+
     .  ~              toggle display of dotfiles, backup files
     s                 toggle sorting (name, extension, size, atime, ctime, mtime)
     S                 reverse sorting
     v                 toggle sidebar preview
-    
+
     n                 open directory in new tab
     N                 close current tab
     t TAB  T S-TAB    next/previous tab
-    
+
     m  SPC            mark/unmark selected file
     %                 enter I-select, mark files by regular expression
     c                 clear list of marked files
@@ -51,13 +51,13 @@ detail (shows file sizes).
     M  F6             move marked files into current directory (mv)
     +  F7             create new directory (mkdir -p)
     X  F8             remove marked files recursively (rm -rf)
-    
+
     !                 run shell command:
         TAB               insert currently selected file
         S-TAB             insert currently marked files
     C-l  C-r          refresh display
     q  F10  C-o       quit colfm
-    
+
 All prompts can be canceled with ESC or C-g and support primitive
 editing with C-w and C-u in classical Unix manner.
 
