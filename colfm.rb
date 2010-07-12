@@ -59,6 +59,7 @@ module Curses
   end
 end
 
+$LS_COLORS = nil
 
 $dotfiles = false
 $backup = true
@@ -70,23 +71,33 @@ $tabs = []
 
 $marked = []
 
-MIN_COL_WIDTH = 8
-MAX_COL_WIDTH = 20
-MAX_ACTIVE_COL_WIDTH = 28
-SIDEBAR_MIN_WIDTH = 20
+$min_col_width = 8
+$max_col_width = 20
+$max_active_col_width = 28
+$sidebar_min_width = 20
 
-FAVORITES = [["/", "/"],
+$favorites = [["/", "/"],
              ["~", "~"],
              ["~/Desktop", "Desktop"]]
 
-VIEWER = "less"
+$viewer = "less"
 
 RCFILE = File.expand_path("~/.colfmrc")
 SAVE_MARKED = File.expand_path("~/.colfmsel")
 SAVE_DIR = File.expand_path("~/.colfmdir")
 
+$colors = true
+
 $sort = 1
 $reverse = false
+
+SORT_NAMES = [nil,
+                  "name",
+                  "extension",
+                  "size",
+                  "atime",
+                  "ctime",
+                  "mtime"]
 
 if File.directory?(File.expand_path("~/.avfs/#avfsstat"))
   $avfs = File.expand_path("~/.avfs")
@@ -135,8 +146,8 @@ class Directory
   end
 
   def width
-    [[MIN_COL_WIDTH, (@entries.map { |e| e.width }.max || 0)].max,
-     active? ? MAX_ACTIVE_COL_WIDTH : MAX_COL_WIDTH].min +
+    [[$min_col_width, (@entries.map { |e| e.width }.max || 0)].max,
+     active? ? $max_active_col_width : $max_col_width].min +
       (active? ? 5 : 0)
   end
 
@@ -182,9 +193,76 @@ class Directory
       break  if j-skiplines > max_y
       
       Curses.setpos(j+2-skiplines, x)
+
+      if $LS_COLORS && $colors
+        pair = nil
+        ls_mode = nil
+
+        if entry.directory? && !entry.symlink?
+          if entry.stat.mode & 00002 > 0
+            if entry.stat.mode & 01000 > 0
+              # sticky and other-writable
+              ls_mode = "tw"
+            else
+              # other-writable
+              ls_mode = "ow"
+            end
+          else
+            if entry.stat.mode & 01000 > 0
+              # sticky but not other-writeable
+              ls_mode = "st"
+            else
+              ls_mode = "di"
+            end
+          end
+        elsif entry.symlink?
+          dest = File.readlink(entry.path)
+          if File.exist?(dest)
+            # FIXME support "target" as a color
+            ls_mode = "ln"
+          else
+            ls_mode = "or"
+          end
+        elsif entry.executable?
+          ls_mode = "ex"
+        elsif entry.pipe?
+          ls_mode = "pi"
+        elsif entry.blockdev?
+          ls_mode = "bd"
+        elsif entry.chardev?
+          ls_mode = "cd"
+        elsif entry.socket?
+          ls_mode = "so"
+        elsif entry.file?
+          if entry.stat.mode & 04000 > 0
+            ls_mode = "su"
+          elsif entry.stat.mode & 02000 > 0
+            ls_mode = "sg"
+          else
+            parts = entry.path.split(".")
+            if parts.size > 1
+              ext = parts[-1]
+              ls_mode = "*.#{ext}"
+            end
+          end
+        end
+
+        if ls_mode
+          color = $LS_COLORS[ls_mode] || $LS_COLORS["fi"]
+          pair = Curses.COLOR_PAIR(color[:pair]) if color
+        end
+
+        if pair
+          Curses.attron(pair)
+        end
+      end
       Curses.standout  if j == @cur
       Curses.attron(Curses::A_BOLD)  if entry.marked?
+
       Curses.addstr entry.format(width, active?)
+      if $colors && pair
+        Curses.attroff(pair)
+      end
       Curses.attroff(Curses::A_BOLD)  if entry.marked?
       Curses.standend  if j == @cur
     }
@@ -199,8 +277,8 @@ end
 
 class Favorites < Directory
   def refresh
-    @entries = FAVORITES.map { |path, label|
-      FavoriteItem.new(File.expand_path(path), label) 
+    @entries = $favorites.map { |path, label|
+      FavoriteItem.new(File.expand_path(path), label)
     }
   end
 end
@@ -255,13 +333,41 @@ class EmptyItem
     false
   end
 
+  def symlink?
+    false
+  end
+
+  def pipe?
+    false
+  end
+
+  def executable?
+    false
+  end
+
+  def blockdev?
+    false
+  end
+
+  def chardev?
+    false
+  end
+
+  def socket?
+    false
+  end
+
+  def file?
+    false
+  end
+
   def ls_l
     "-- #@msg --"
   end
 end
 
 class FileItem
-  attr_reader :path, :name
+  attr_reader :path, :name, :lstat, :stat
 
   def initialize(path)
     @path = path
@@ -286,6 +392,34 @@ class FileItem
 
   def marked?
     $marked.include? @path
+  end
+
+  def symlink?
+    @lstat.symlink?
+  end
+
+  def directory?
+    @stat.directory?
+  end
+
+  def executable?
+    @stat.executable?
+  end
+
+  def socket?
+    @stat.socket?
+  end
+
+  def pipe?
+    @stat.pipe?
+  end
+
+  def blockdev?
+    @lstat.blockdev?
+  end
+
+  def chardev?
+    @lstat.chardev?
   end
 
   def format(width, detail)
@@ -430,7 +564,7 @@ class FileItem
       $active.parent = prev_active
     else
       Curses.endwin
-      system VIEWER, path
+      system $viewer, path
       Curses.refresh
     end
   end
@@ -496,7 +630,7 @@ end
 
 class Sidebar
   def width
-    SIDEBAR_MIN_WIDTH
+    $sidebar_min_width
   end
 
   def draw(x)
@@ -514,6 +648,10 @@ class Sidebar
       y += 1
     }
   end
+end
+
+def sort_string
+  ($reverse ? "↓" : "↑") + SORT_NAMES[$sort]
 end
 
 def refresh
@@ -541,9 +679,36 @@ def draw
 
   sel = $active.sel
   Curses.setpos(Curses.lines-2, 0)
-  Curses.addstr "#{$marked.size} [" + $marked.join(" ") + "]"
+  if $marked.size > 0
+    s1 = $marked.size.to_s
+    s2 = ""
+
+    width = Curses.cols - s1.size - 3
+    oversized = false
+
+    $marked.each do |mark|
+      if (s2.size + mark.size) < width
+        s2 << mark << " "
+      else
+        oversized = true
+        cutoff_width = width-s2.size-3
+        if cutoff_width >= 0
+          s2 << mark[0..cutoff_width] + "…"
+        else
+          s2 << "…"
+        end
+        break
+      end
+    end
+    s2[-1..-1] = '' if s2[-1..-1] == " "
+
+    str = "#{s1} [#{s2}" + (oversized ? "" : "]")
+    Curses.addstr str
+  else
+    Curses.addstr "No marked files"
+  end
   Curses.setpos(Curses.lines-1, 0)
-  Curses.addstr "colfm - #$sort - #{sel ? sel.ls_l : ""}"
+  Curses.addstr "colfm - #{sort_string} - #{sel ? sel.ls_l : ""}"
 
   if $sidebar
     sidebar = Sidebar.new
@@ -586,7 +751,7 @@ def readline(prompt)
     draw
 
     Curses.setpos(Curses.lines-1, 0)
-    Curses.addstr "colfm - #$sort - #{prompt}" << str
+    Curses.addstr "colfm - #{sort_string} - #{prompt}" << str
     Curses.clrtoeol
     Curses.refresh
 
@@ -691,7 +856,7 @@ def action(title, question, command, *args)
   draw
   Curses.setpos(Curses.lines-1, 0)
   Curses.clrtoeol
-  Curses.addstr "colfm - #$sort - #{question} (y/N) "
+  Curses.addstr "colfm - #{sort_string} - #{question} (y/N) "
   Curses.refresh
   case c = Curses.getch
   when ?y.ord
@@ -700,6 +865,42 @@ def action(title, question, command, *args)
   switch_back
   refresh
   c == ?y.ord
+end
+
+def parse_ls_colors(s)
+  colors = {}
+  pairs = []
+  s.split(":").each_with_index do |definition, i|
+    name, pair = definition.split("=")
+    attr, fg = pair.split(";").map { |s| s.to_i }
+    if fg.nil?
+      n_fg = 0
+        n_bg = 0
+      bold = false
+    else
+      if fg >= 40
+        attr, fg = fg, attr
+      end
+      n_fg = fg - 30
+      n_bg = -1
+      bold = false
+      if attr == 0
+        # default
+      elsif attr == 1
+        # bold
+        bold = true
+      elsif attr >= 40
+        # background
+        n_bg = attr - 40
+        n_bg = -1 if n_bg == 0
+      end
+    end
+    arr = [n_bg, n_fg]
+    pairs << arr unless pairs.include?(arr)
+    colors[name] = { :fg => n_fg, :bg => n_bg, :bold => bold, :pair => pairs.index(arr)+1 }
+  end
+
+  [pairs, colors]
 end
 
 
@@ -734,6 +935,16 @@ begin
   $marked = File.read(SAVE_MARKED).split("\0")  rescue []  if SAVE_MARKED
 
   $stdscr = Curses.initscr
+  Curses.start_color
+  Curses.use_default_colors
+
+  if ENV["LS_COLORS"] && $colors
+    pairs, $LS_COLORS = parse_ls_colors(ENV["LS_COLORS"])
+    pairs.each_with_index do |(bg, fg), i|
+      Curses.init_pair(i+1, fg, bg)
+    end
+  end
+
   Curses.nonl
   Curses.cbreak
   Curses.raw
