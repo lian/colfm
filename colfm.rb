@@ -104,6 +104,7 @@ if File.directory?(File.expand_path("~/.avfs/#avfsstat"))
 end
 
 begin
+  FAVORITES = []
   load RCFILE
 rescue LoadError
 end
@@ -403,23 +404,23 @@ class FileItem
   end
 
   def executable?
-    @stat.executable?
+    @stat && @stat.executable?
   end
 
   def socket?
-    @stat.socket?
+    @stat && @stat.socket?
   end
 
   def pipe?
-    @stat.pipe?
+    @stat && @stat.pipe?
   end
 
   def blockdev?
-    @lstat.blockdev?
+    @lstat && @lstat.blockdev?
   end
 
   def chardev?
-    @lstat.chardev?
+    @lstat && @lstat.chardev?
   end
 
   def format(width, detail)
