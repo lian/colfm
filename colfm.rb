@@ -21,26 +21,28 @@ class Fixnum
   end
 end
 
+
 ENV["RUBY_FFI_NCURSES_LIB"] = "ncursesw"
 require 'ffi-ncurses'
 require 'ffi-ncurses/keydefs'
-('A'..'Z').each { |c| NCurses.const_set "KEY_CTRL_#{c}", c[0].ord-?A.ord+1 }
 
-Curses = NCurses
-Curses.extend FFI::NCurses
+Curses = FFI::NCurses
+
+('A'..'Z').each { |c| Curses.const_set "KEY_CTRL_#{c}", c[0].ord-?A.ord+1 }
+
 
 module Curses
   A_BOLD = FFI::NCurses::A_BOLD
-  KEY_F1 = NCurses::KEY_F0+1
-  KEY_F2 = NCurses::KEY_F0+2
-  KEY_F3 = NCurses::KEY_F0+3
-  KEY_F4 = NCurses::KEY_F0+4
-  KEY_F5 = NCurses::KEY_F0+5
-  KEY_F6 = NCurses::KEY_F0+6
-  KEY_F7 = NCurses::KEY_F0+7
-  KEY_F8 = NCurses::KEY_F0+8
-  KEY_F9 = NCurses::KEY_F0+9
-  KEY_F10 = NCurses::KEY_F0+10
+  KEY_F1 = KEY_F0+1
+  KEY_F2 = KEY_F0+2
+  KEY_F3 = KEY_F0+3
+  KEY_F4 = KEY_F0+4
+  KEY_F5 = KEY_F0+5
+  KEY_F6 = KEY_F0+6
+  KEY_F7 = KEY_F0+7
+  KEY_F8 = KEY_F0+8
+  KEY_F9 = KEY_F0+9
+  KEY_F10 = KEY_F0+10
 
   def self.cols
     getmaxx($stdscr)
