@@ -84,9 +84,17 @@ $favorites = [["/", "/"],
 
 $viewer = "less"
 
+$dots_path ||= "/tmp/#{ENV['USER']}"
+
 RCFILE = File.expand_path("~/.colfmrc")
-SAVE_MARKED = File.expand_path("~/.colfmsel")
-SAVE_DIR = File.expand_path("~/.colfmdir")
+
+if File.directory?($dots_path)
+  SAVE_MARKED = File.expand_path($dots_path + "/.colfmsel")
+  SAVE_DIR = File.expand_path($dots_path + "/.colfmdir")
+else
+  SAVE_MARKED = File.expand_path("~/.colfmsel")
+  SAVE_DIR = File.expand_path("~/.colfmdir")
+end
 
 $colors = true
 
