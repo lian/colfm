@@ -83,6 +83,7 @@ $favorites = [["/", "/"],
              ["~/Desktop", "Desktop"]]
 
 $viewer = "less"
+$viewer_return_file = ENV['COLFM_RETURN_FILE']
 
 $dots_path ||= "/tmp/#{ENV['USER']}"
 
@@ -564,6 +565,15 @@ class FileItem
     @name.size + 1
   end
 
+  def viewer_draw
+    if $viewer_return_file
+      File.open($viewer_return_file, 'wb'){|f| f.print path }
+      exit
+    else
+      system $viewer, path
+    end
+  end
+
   def activate
     if directory?
       prev_active = $active
@@ -575,7 +585,7 @@ class FileItem
       $active.parent = prev_active
     else
       Curses.endwin
-      system $viewer, path
+      viewer_draw
       Curses.refresh
     end
   end
