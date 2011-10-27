@@ -1055,6 +1055,26 @@ begin
       iselect
       draw
       Curses.refresh
+    when ?E.ord
+      if $active.sel.file?
+        Curses.endwin
+        system "vim" , $active.sel.path
+        Curses.refresh
+      end
+    when ?O.ord
+      if $active.sel.file?
+        Curses.endwin
+        file = $active.sel.path
+        case File.extname(file)[1..-1]
+        when /avi|m4v|mpg|mpeg|mkv|mp3|mp4|mov|wmv|ogg|ogv|m3u/i
+         system "mplayer" , file
+        when /png|jpg/i
+         system "feh" , file
+        when /pdf/i
+         system "xpdf" , file
+        end
+        Curses.refresh
+      end
     when ?c.ord
       $marked.clear
     when ?m.ord, ?\s.ord

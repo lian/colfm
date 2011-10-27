@@ -31,8 +31,8 @@ detail (shows file sizes).
     g    Home         move to first file
     G    End          move to last file
     /  C-s            enter I-search, find file by regular expression:
-        /   Right         enter selected directory
-        ..  Left          go to parent
+    /   Right         enter selected directory
+    ..  Left          go to parent
 
     .  ~              toggle display of dotfiles, backup files
     s                 toggle sorting (name, extension, size, atime, ctime, mtime)
@@ -42,6 +42,9 @@ detail (shows file sizes).
     n                 open directory in new tab
     N                 close current tab
     t TAB  T S-TAB    next/previous tab
+
+    E                 open file in vim
+    O                 open file
 
     m  SPC            mark/unmark selected file
     %                 enter I-select, mark files by regular expression
