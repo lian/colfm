@@ -9,56 +9,104 @@ module Setlocale
   ffi_lib('c')
   LC_ALL = 6
   attach_function :setlocale, [:int, :string], :uint
+  setlocale(LC_ALL, "")
 end
-Setlocale.setlocale(Setlocale::LC_ALL, "")
 
 class Fixnum
-  # <=1.8.6
-  if !defined?(ord)
-    def ord
-      self
-    end
+  if !defined?(ord) # <=1.8.6
+    def ord; self; end
   end
 end
 
 
-ENV["RUBY_FFI_NCURSES_LIB"] = "ncursesw"
-require 'ffi-ncurses'
-require 'ffi-ncurses/keydefs'
+
+
+if ENV["RUBY_FFI_NCURSES_GEM"].to_s != ''
+  require 'ffi-ncurses'
+  require 'ffi-ncurses/keydefs'
+else
+  ENV["RUBY_FFI_NCURSES_LIB"] = "ncursesw"
+  require 'ffi'
+  module FFI
+  module NCurses
+    VERSION = "0.3.2-tiny"
+    extend FFI::Library
+
+    # use RUBY_FFI_NCURSES_LIB to specify exactly which lib you want, e.g. ncursesw, XCurses (from PDCurses)
+    if ENV["RUBY_FFI_NCURSES_LIB"].to_s != ""
+      LIB_HANDLE = ffi_lib( ENV["RUBY_FFI_NCURSES_LIB"] ).first
+    else
+      LIB_HANDLE = ffi_lib( ['ncursesw', 'ncurses', 'libncurses.so.5', 'XCurses'] ).first
+    end
+
+    [
+      [:COLOR_PAIR, [:int], :int],
+      [:PAIR_NUMBER, [:int], :int],
+      [:keypad, [:pointer, :int], :int],
+      [:noecho, [], :int],
+      [:raw, [], :int],
+      [:cbreak, [], :int],
+      [:nonl, [], :int],
+      [:init_pair, [:short, :short, :short], :int],
+      [:use_default_colors, [], :int],
+      [:start_color, [], :int],
+      #["_initscr", :initscr, [], :pointer],
+      [:initscr, [], :pointer],
+      [:endwin, [], :int],
+      [:meta, [:pointer, :int], :int],
+      [:erase, [], :int],
+      [:move, [:int, :int], :int],
+      [:getmaxx, [:pointer], :int],
+      [:attron, [:uint], :int],
+      [:waddnstr, [:pointer, :string, :int], :int],
+      [:attroff, [:uint], :int],
+      [:getmaxy, [:pointer], :int],
+      [:standout, [], :int],
+      [:standend, [], :int],
+      [:getch, [], :int],
+      [:refresh, [], :int],
+      [:clrtoeol, [], :int],
+    ].each{|func| attach_function(*func) }
+
+    # following definitions have been copied (almost verbatim) from ncurses.h
+    NCURSES_ATTR_SHIFT = 8
+    def self.NCURSES_BITS(mask, shift)
+      ((mask) << ((shift) + NCURSES_ATTR_SHIFT))
+    end
+
+    WA_BOLD = A_BOLD = NCURSES_BITS(1,13) # extra bright or bold text
+
+    KEY_F0        = 0410 # Function keys.  Space for 64
+    KEY_DOWN      = 0402 # down-arrow key
+    KEY_UP        = 0403 # up-arrow key
+    KEY_LEFT      = 0404 # left-arrow key
+    KEY_RIGHT     = 0405 # right-arrow key
+    KEY_HOME      = 0406 # home key
+    KEY_BACKSPACE = 0407 # backspace key
+    KEY_NPAGE     = 0522 # next-page key
+    KEY_PPAGE     = 0523 # previous-page key
+    KEY_END       = 0550 # end key
+    KEY_BTAB      = 0541 # back-tab key
+
+    #extend self
+  end
+  end
+end
+
+
 
 Curses = FFI::NCurses
 
-('A'..'Z').each { |c| Curses.const_set "KEY_CTRL_#{c}", c[0].ord-?A.ord+1 }
-
 
 module Curses
-  A_BOLD = FFI::NCurses::A_BOLD
-  KEY_F1 = KEY_F0+1
-  KEY_F2 = KEY_F0+2
-  KEY_F3 = KEY_F0+3
-  KEY_F4 = KEY_F0+4
-  KEY_F5 = KEY_F0+5
-  KEY_F6 = KEY_F0+6
-  KEY_F7 = KEY_F0+7
-  KEY_F8 = KEY_F0+8
-  KEY_F9 = KEY_F0+9
-  KEY_F10 = KEY_F0+10
+  A_BOLD = FFI::NCurses::A_BOLD unless defined?(A_BOLD)
+  ('A'..'Z').each{|c| Curses.const_set "KEY_CTRL_#{c}", c[0].ord-?A.ord+1 }
+  (1..10).each{|n| Curses.const_set "KEY_F#{n}", KEY_F0+n }
 
-  def self.cols
-    getmaxx($stdscr)
-  end
-
-  def self.lines
-    getmaxy($stdscr)
-  end
-
-  def self.setpos(y, x)
-    move(y, x)
-  end
-
-  def addstr(s)
-    waddnstr($stdscr, s, s.size)
-  end
+  def self.cols; getmaxx($stdscr); end
+  def self.lines; getmaxy($stdscr); end
+  def self.setpos(y, x); move(y, x); end
+  def self.addstr(s); waddnstr($stdscr, s, s.size); end
 end
 
 $LS_COLORS = nil
@@ -102,13 +150,7 @@ $colors = true
 $sort = 1
 $reverse = false
 
-SORT_NAMES = [nil,
-                  "name",
-                  "extension",
-                  "size",
-                  "atime",
-                  "ctime",
-                  "mtime"]
+SORT_NAMES = [nil, "name", "extension", "size", "atime", "ctime", "mtime"]
 
 if File.directory?(File.expand_path("~/.avfs/#avfsstat"))
   $avfs = File.expand_path("~/.avfs")
@@ -123,19 +165,14 @@ end
 
 class Directory
   attr_reader :dir
-  attr_accessor :cur
-  attr_accessor :parent
+  attr_accessor :cur, :parent
 
   def initialize(dir)
-    @dir = dir
-    @cur = 0
-
+    @dir, @cur = dir, 0
     refresh
   end
 
-  def active?
-    $active == self
-  end
+  def active?; $active == self; end
 
   def refresh
     Dir.chdir @dir
@@ -163,25 +200,15 @@ class Directory
       (active? ? 5 : 0)
   end
 
-  def sel
-    @entries[@cur]
-  end
+  def sel; @entries[@cur]; end
 
   def cursor(offset)
     @cur = [[@cur + offset, 0].max, @entries.size-1].min
   end
 
-  def next
-    @cur = (@cur+1) % @entries.size
-  end
-
-  def first
-    @cur = 0
-  end
-
-  def last
-    @cur = @entries.size-1
-  end
+  def next;  @cur = (@cur+1) % @entries.size; end
+  def first; @cur = 0; end
+  def last;  @cur = @entries.size-1; end
 
   def select(name)
     @entries.each_with_index { |e, i|
@@ -311,71 +338,23 @@ class Selection < Directory
 end
 
 class EmptyItem
-  def initialize(msg)
-    @msg = msg
-  end
-
-  def width
-    0
-  end
-
-  def format(width, detail)
-    ls_l.ljust(width)
-  end
-
-  def activate
-  end
-
-  def mark
-  end
-
-  def marked?
-    false
-  end
-
-  def preview
-    ""
-  end
-
-  def name
-    ""
-  end
-
-  def directory?
-    false
-  end
-
-  def symlink?
-    false
-  end
-
-  def pipe?
-    false
-  end
-
-  def executable?
-    false
-  end
-
-  def blockdev?
-    false
-  end
-
-  def chardev?
-    false
-  end
-
-  def socket?
-    false
-  end
-
-  def file?
-    false
-  end
-
-  def ls_l
-    "-- #@msg --"
-  end
+  def initialize(msg); @msg = msg; end
+  def width; 0; end
+  def format(width, detail); ls_l.ljust(width); end
+  def activate; end
+  def mark; end
+  def marked?; false; end
+  def preview; ""; end
+  def name; ""; end
+  def directory?; false; end
+  def symlink?; false; end
+  def pipe?; false; end
+  def executable?; false; end
+  def blockdev?; false; end
+  def chardev?; false; end
+  def socket?; false; end
+  def file?; false; end
+  def ls_l; "-- #@msg --"; end
 end
 
 class FileItem
@@ -383,7 +362,6 @@ class FileItem
 
   def initialize(path)
     @path = path
-
     refresh
   end
 
@@ -877,7 +855,7 @@ def action(title, question, command, *args)
   draw
   Curses.setpos(Curses.lines-1, 0)
   Curses.clrtoeol
-  Curses.addstr "colfm - #{sort_string} - #{question} (y/N) "
+  Curses.addstr "colfm - #{sort_string} - #{question} (y/N)  "
   Curses.refresh
   case c = Curses.getch
   when ?y.ord

@@ -7,7 +7,7 @@
 if [ -r /tmp/$USER/.colfmdir ]; then
   colfm_dir="/tmp/$USER"
 else
-  colfm_dir="~"
+  colfm_dir="$HOME"
 fi
 
 ccd() {

@@ -12,7 +12,7 @@ http://imgur.com/WetkX.png
 
 Ruby 1.8 and 1.9 are supported.
 
-    gem install ffi ffi-ncurses
+    gem install ffi
     cp colfm.rb ~/bin
     cat colfm.zsh >>~/.zshrc        # or better source it
 
