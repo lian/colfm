@@ -20,12 +20,12 @@ end
 
 
 
+ENV["RUBY_FFI_NCURSES_LIB"] ||= "ncursesw libncursesw.so.5"
 
 if ENV["RUBY_FFI_NCURSES_GEM"].to_s != ''
   require 'ffi-ncurses'
   require 'ffi-ncurses/keydefs'
 else
-  ENV["RUBY_FFI_NCURSES_LIB"] = "ncursesw"
   require 'ffi'
   module FFI
   module NCurses
@@ -34,7 +34,7 @@ else
 
     # use RUBY_FFI_NCURSES_LIB to specify exactly which lib you want, e.g. ncursesw, XCurses (from PDCurses)
     if ENV["RUBY_FFI_NCURSES_LIB"].to_s != ""
-      LIB_HANDLE = ffi_lib( ENV["RUBY_FFI_NCURSES_LIB"] ).first
+      LIB_HANDLE = ffi_lib( ENV["RUBY_FFI_NCURSES_LIB"].split(" ") ).first
     else
       LIB_HANDLE = ffi_lib( ['ncursesw', 'ncurses', 'libncurses.so.5', 'XCurses'] ).first
     end
