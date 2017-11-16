@@ -18,7 +18,7 @@ func getSaveDirFile() string {
 	if _, err := os.Stat(fmt.Sprintf("/tmp/%s", u.Username)); err == nil {
 		path = fmt.Sprintf("/tmp/%s/.colfmdir", u.Username)
 	} else {
-		path = fmt.Sprintf("/tmp/%s/.colfmdir", u.HomeDir)
+		path = fmt.Sprintf("%s/.colfmdir", u.HomeDir)
 	}
 	return path
 }
