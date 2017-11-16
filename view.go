@@ -7,7 +7,8 @@ import (
 )
 
 type FileView struct {
-	Columns []*FileColumn
+	Columns     []*FileColumn
+	HiddenFiles bool
 }
 
 func NewFileView() *FileView {
@@ -41,7 +42,7 @@ func (v *FileView) Cd(dir string) {
 		v.Columns[len(v.Columns)-1].Active = false
 	}
 
-	column := NewFileColumn(dir)
+	column := NewFileColumn(dir, v.HiddenFiles)
 	column.Active = true
 	v.Columns = append(v.Columns, column)
 }

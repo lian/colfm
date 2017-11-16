@@ -17,7 +17,7 @@ type FileColumn struct {
 	Active bool
 }
 
-func NewFileColumn(root string) *FileColumn {
+func NewFileColumn(root string, hiddenFiles bool) *FileColumn {
 	v := &FileColumn{
 		Root:  root,
 		Items: []*FileItem{},
@@ -36,6 +36,10 @@ func NewFileColumn(root string) *FileColumn {
 	}
 
 	for _, info := range infos {
+		if !hiddenFiles && (info.Name()[0] == '.') {
+			continue
+		}
+
 		item := &FileItem{
 			Parent: root,
 			Info:   info,

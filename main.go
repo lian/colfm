@@ -45,6 +45,9 @@ LOOP:
 				view.Enter()
 			} else if ev.Key() == tcell.KeyLeft || ev.Rune() == 'h' {
 				view.Leave()
+			} else if ev.Rune() == '.' {
+				view.HiddenFiles = !view.HiddenFiles
+				view.CdFull(view.Active().Root)
 			}
 		}
 
