@@ -98,8 +98,8 @@ func (v *FileView) Draw() {
 	skip := v.Skipcols()
 
 	xpos := 1
-	ypos := 1
-	max_y := window.Height - 2
+	ypos := 2
+	max_y := window.Height - 4
 
 	for n, col := range v.Columns {
 		if n < skip {
