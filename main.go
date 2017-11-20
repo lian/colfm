@@ -23,8 +23,10 @@ func main() {
 
 LOOP:
 	for {
-
-		emitStr(window.Screen, 1, 0, window.DefaultStyle, view.Active().Selection().FullPath())
+		sel := view.Active().Selection()
+		if sel != nil {
+			emitStr(window.Screen, 1, 0, window.DefaultStyle, sel.FullPath())
+		}
 		view.Draw()
 		window.Show()
 

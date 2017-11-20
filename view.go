@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -35,6 +36,12 @@ func (v *FileView) Cd(dir string) {
 	info, err := os.Stat(dir)
 	if err != nil || !info.IsDir() {
 		fmt.Println("not a directory", dir)
+		return
+	}
+
+	infos, err := ioutil.ReadDir(dir)
+	if err != nil || len(infos) == 0 {
+		//fmt.Println("directory empty", dir)
 		return
 	}
 
