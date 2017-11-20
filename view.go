@@ -67,10 +67,9 @@ func (v *FileView) Enter() {
 	if item.IsDir() {
 		v.Cd(item.FullPath())
 	} else {
-		window.Screen.Clear()
-		window.Screen.Sync()
+		window.Destroy()
 		LessFile(item.FullPath())
-		window.Screen.Sync()
+		window.Init()
 	}
 }
 

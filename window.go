@@ -16,6 +16,15 @@ type Window struct {
 }
 
 func NewWindow() *Window {
+	tcell_encoding.Register()
+
+	w := &Window{}
+	w.Init()
+
+	return w
+}
+
+func (w *Window) Init() {
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -26,19 +35,12 @@ func NewWindow() *Window {
 		os.Exit(1)
 	}
 
-	tcell_encoding.Register()
-
-	w := &Window{
-		Screen: screen,
-	}
+	w.Screen = screen
 
 	w.DefaultStyle = tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
 	w.Screen.SetStyle(w.DefaultStyle)
-	w.Screen.Clear()
 
 	w.OnResize()
-
-	return w
 }
 
 func (w *Window) Show() {
